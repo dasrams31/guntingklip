@@ -1,0 +1,27 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# GuntingKlip outputs — klip hasil & caption TIDAK dibackup
+clips/
+clips_*/
+klip_*.mp4
+caption.txt
+
+# Video/audio sumber (besar, bukan kode)
+*.mp4
+*.mov
+*.mkv
+*.webm
+*.mp3
+*.wav
+*.m4a
+*.aac
+
+# Cache & temp
+*.tmp
+*.part
+audio_*/
+.transcript_cache/
