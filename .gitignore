@@ -25,3 +25,6 @@ caption.txt
 *.part
 audio_*/
 .transcript_cache/
+
+# Config lokal klip.sh (default campaign pribadi — jangan ikut repo)
+.klip-config

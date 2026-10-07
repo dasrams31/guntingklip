@@ -73,7 +73,36 @@ def transcribe(wav):
     return segs, info.duration
 
 
-def llm_pick_moments(segments, duration, n_clips, min_dur, max_dur, topik):
+def nine_router_config():
+    """Ambil URL + API key 9Router dari beberapa sumber (prioritas atas dulu).
+
+    Key:  1) env NINE_ROUTER_KEY
+          2) ~/.config/guntingklip/9router_key   (dibuat oleh install.sh)
+          3) ~/workspace/agentarium/agents/.keys/.9router_key  (legacy, VPS ini)
+    URL:  1) env NINE_ROUTER_URL
+          2) ~/.config/guntingklip/9router_url
+          3) default http://127.0.0.1:20128/v1
+    """
+    key = os.environ.get("NINE_ROUTER_KEY", "").strip()
+    url = os.environ.get("NINE_ROUTER_URL", "").strip()
+    cfg = os.path.expanduser("~/.config/guntingklip")
+    if not key:
+        for p in (os.path.join(cfg, "9router_key"),
+                  os.path.expanduser("~/workspace/agentarium/agents/.keys/.9router_key")):
+            if os.path.isfile(p):
+                key = open(p).read().strip()
+                if key:
+                    break
+    if not url:
+        p = os.path.join(cfg, "9router_url")
+        if os.path.isfile(p):
+            url = open(p).read().strip()
+    if not url:
+        url = "http://127.0.0.1:20128/v1"
+    return url.rstrip("/"), key
+
+
+def llm_pick_moments(segments, duration, n_clips, min_dur, max_dur, topik, model):
     """Minta LLM pilih momen terbaik dari transkrip."""
     print("[2/4] AI pilih momen terbaik...", flush=True)
     # Ringkas transkrip jadi teks bernomor waktu
@@ -84,7 +113,12 @@ def llm_pick_moments(segments, duration, n_clips, min_dur, max_dur, topik):
         lines.append(f"[{mm:02d}:{ss:02d}] {s['text']}")
     transcript = "\n".join(lines)
 
-    key = open(os.path.expanduser("~/workspace/agentarium/agents/.keys/.9router_key")).read().strip()
+    key_url, key = nine_router_config()
+    if not key:
+        print("LLM: API key 9Router tidak ditemukan "
+              "(env NINE_ROUTER_KEY / ~/.config/guntingklip/9router_key) — "
+              "pakai fallback merata.", flush=True)
+        return fallback_moments(duration, n_clips, min_dur, max_dur)
     prompt = (
         "Kamu editor konten clipper TikTok. Dari transkrip video berikut, pilih "
         f"{n_clips} momen TERBAIK untuk dijadikan klip pendek.\n"
@@ -99,7 +133,7 @@ def llm_pick_moments(segments, duration, n_clips, min_dur, max_dur, topik):
         f"TRANSKRIP:\n{transcript}"
     )
     body = json.dumps({
-        "model": "smollm2",
+        "model": model,
         "messages": [
             {"role": "system",
              "content": "Kamu mesin ekstraksi JSON. Jawab HANYA dengan JSON valid, tanpa teks pembuka/penutup, tanpa penjelasan."},
@@ -109,7 +143,7 @@ def llm_pick_moments(segments, duration, n_clips, min_dur, max_dur, topik):
         "temperature": 0.3,
     }).encode()
     req = urllib.request.Request(
-        "http://127.0.0.1:20128/v1/chat/completions", data=body,
+        f"{key_url}/chat/completions", data=body,
         headers={"Content-Type": "application/json",
                  "Authorization": f"Bearer {key}"})
     try:
@@ -258,6 +292,8 @@ def main():
     ap.add_argument("--min-dur", type=int, default=15, help="durasi min klip (detik)")
     ap.add_argument("--max-dur", type=int, default=45, help="durasi max klip (detik)")
     ap.add_argument("--out", default="clips", help="folder output")
+    ap.add_argument("--model", default="smollm2",
+                    help="model LLM via 9Router (default: smollm2)")
     args = ap.parse_args()
 
     if not os.path.isfile(args.video):
@@ -270,7 +306,8 @@ def main():
     if not segments:
         sys.exit("Transkrip kosong — pastikan video ada suara.")
     moments = llm_pick_moments(segments, duration, args.clips,
-                               args.min_dur, args.max_dur, args.topik)
+                               args.min_dur, args.max_dur, args.topik,
+                               args.model)
 
     print("[3/4] Potong & edit klip...", flush=True)
     outs = []

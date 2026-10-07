@@ -1,0 +1,7 @@
+# GuntingKlip — pinned dependency (tested 2026-10-06)
+faster-whisper==1.2.1
+av==15.1.0
+ctranslate2==4.8.2
+numpy==2.5.3
+onnxruntime==1.30.0
+tokenizers==0.23.2

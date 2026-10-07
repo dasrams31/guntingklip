@@ -29,9 +29,36 @@ video_panjang.mp4
 ## Install
 
 ```bash
+git clone https://github.com/dasrams31/guntingklip.git
+cd guntingklip
+bash install.sh
+```
+
+Installer otomatis: cek `python3` + `ffmpeg`, bikin venv, install dependency (pinned),
+minta URL + API key 9Router (disimpan di `~/.config/guntingklip/`, chmod 600),
+opsional pre-download model Whisper `small` (~500MB).
+
+Butuh 9Router yang jalan (lokal / remote) — model default `smollm2`, bisa diganti via `--model`.
+Tanpa API key pun tetap jalan (fallback: klip dibagi merata).
+
+## Cara pakai (gampang)
+
+```bash
 cd ~/workspace/guntingklip
+bash klip.sh video.mp4
+# atau: bash klip.sh "https://..." (URL langsung di-download)
+```
+
+Tinggal jawab 5 pertanyaan (topik, campaign, rate, link join, jumlah klip) — jawaban tersimpan jadi default buat berikutnya. Klip jadi di `clips/`, caption di `clips/caption.txt`.
+
+## Cara pakai (manual, full control)
+
+Install manual tanpa `install.sh`:
+
+```bash
 python3 -m venv .venv
-.venv/bin/pip install faster-whisper
+.venv/bin/pip install -r requirements.txt
+# API key: env NINE_ROUTER_KEY, atau ~/.config/guntingklip/9router_key
 ```
 
 Download model whisper sekali (otomatis saat pertama jalan, ~500MB untuk `small`).
